@@ -1,0 +1,44 @@
+name: openspec
+homepage: https://github.com/Fission-AI/OpenSpec
+
+version_pin:
+  npm_version: "0.x"    # tracks latest 0.x line; pin exact in scorecard
+
+install:
+  - "npm install -g @fission-ai/openspec"
+  - "openspec --version"
+
+invoke:
+  per_task:
+    commands:
+      - "openspec init {repo}"
+      - "openspec propose --prompt-file {prompt_path} --agent claude-code --workdir {repo}"
+      - "openspec apply --workdir {repo}"
+    env:
+      ANTHROPIC_MODEL: "claude-opus-4-7"
+
+artefacts:
+  intent:
+    - "openspec/intent.md"
+  spec:
+    - "openspec/specs/**/*.md"
+    - "openspec/changes/**/specs/**/*.md"
+  plan:
+    - "openspec/changes/**/design.md"
+  tasks:
+    - "openspec/changes/**/tasks.md"
+  code:
+    - "src/**/*"
+  tests:
+    - "tests/**/*"
+
+declared:
+  supported_agents:
+    - claude-code
+    - cursor
+    - aider
+    - continue
+    - cline
+  quickstart_loc: 95
+  user_commands: 3         # propose / apply / archive
+  docs_url: https://openspec.dev/

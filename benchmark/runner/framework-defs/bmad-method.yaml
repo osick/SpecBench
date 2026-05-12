@@ -1,0 +1,52 @@
+name: bmad-method
+homepage: https://github.com/bmad-code-org/BMAD-METHOD
+
+version_pin:
+  release_tag: v6.6.0    # 2026-04-29
+
+install:
+  - "git clone --depth 1 --branch v6.6.0 https://github.com/bmad-code-org/BMAD-METHOD .install/bmad"
+  - "cp -R .install/bmad/.bmad-core ."
+
+invoke:
+  per_task:
+    commands:
+      # BMAD is agent-prompt-based; the runner drives it via Claude Code
+      # using the analyst/PM/architect/SM/dev/QA persona prompts in order.
+      - "claude -p '@analyst Read {prompt_path} and produce docs/prd.md'"
+      - "claude -p '@pm  Refine docs/prd.md'"
+      - "claude -p '@architect Produce docs/architecture.md from prd.md'"
+      - "claude -p '@sm Shard docs/prd.md into docs/stories/'"
+      - "claude -p '@dev Implement docs/stories/*'"
+      - "claude -p '@qa Verify against docs/prd.md acceptance criteria'"
+    env:
+      ANTHROPIC_MODEL: "claude-opus-4-7"
+
+artefacts:
+  intent:
+    - "docs/brief.md"
+  spec:
+    - "docs/prd.md"
+  plan:
+    - "docs/architecture.md"
+  tasks:
+    - "docs/stories/**/*.md"
+  code:
+    - "src/**/*"
+    - "app/**/*"
+  tests:
+    - "tests/**/*"
+    - "test/**/*"
+
+declared:
+  supported_agents:
+    - claude-code
+    - cursor
+    - github-copilot
+    - aider
+    - continue
+    - cline
+    - roo
+  quickstart_loc: 540
+  user_commands: 7         # one per persona phase
+  docs_url: https://docs.bmad-method.org/

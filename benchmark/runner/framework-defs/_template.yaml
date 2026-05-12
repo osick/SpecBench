@@ -1,0 +1,50 @@
+# Copy this file to <your-framework>.yaml and fill it in.
+# Validate with: python ../specbench_runner.py --validate <your-framework>.yaml
+# Schema: ./_schema.json
+
+name: my-framework
+homepage: https://example.com/my-framework
+
+version_pin:
+  git_sha: "0000000000000000000000000000000000000000"
+  # or: release_tag: "v1.2.3"
+  # or: pypi_version: "1.2.3"
+  # or: npm_version: "1.2.3"
+
+install:
+  - "git clone https://github.com/example/my-framework .install/my-framework"
+  - "cd .install/my-framework && git checkout $VERSION"
+  - "pip install -e .install/my-framework"
+
+invoke:
+  per_task:
+    commands:
+      # Templated. {prompt_path} = absolute path to the task's PRD/prompt.
+      # {repo} = absolute path to the working dir for this run.
+      - "my-framework init {repo}"
+      - "my-framework run --prompt {prompt_path} --workdir {repo}"
+    env:
+      MY_FRAMEWORK_MODEL: "claude-opus-4-7"
+
+artefacts:
+  intent:
+    - "intent.md"
+  spec:
+    - "spec.md"
+    - "specs/**/*.md"
+  plan:
+    - "plan.md"
+  tasks:
+    - "tasks.md"
+  code:
+    - "src/**/*"
+  tests:
+    - "tests/**/*"
+
+declared:
+  supported_agents:
+    - claude-code
+    - cursor
+  quickstart_loc: 120
+  user_commands: 4
+  docs_url: https://example.com/my-framework/docs

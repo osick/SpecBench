@@ -1,0 +1,52 @@
+name: spec-kit
+homepage: https://github.com/github/spec-kit
+
+version_pin:
+  release_tag: v0.8.7   # pinned 2026-05-07
+
+install:
+  - "pip install specify-cli"
+  - "specify --version"
+
+invoke:
+  per_task:
+    commands:
+      - "specify init {repo}"
+      - "specify run --prompt-file {prompt_path} --agent claude-code --workdir {repo}"
+    env:
+      ANTHROPIC_MODEL: "claude-opus-4-7"
+
+artefacts:
+  intent:
+    - ".specify/intent.md"
+  spec:
+    - ".specify/spec.md"
+    - "specs/**/spec.md"
+  plan:
+    - ".specify/plan.md"
+    - "specs/**/plan.md"
+  tasks:
+    - ".specify/tasks.md"
+    - "specs/**/tasks.md"
+  code:
+    - "src/**/*"
+    - "app/**/*"
+  tests:
+    - "tests/**/*"
+    - "test/**/*"
+
+declared:
+  supported_agents:
+    - claude-code
+    - cursor
+    - github-copilot
+    - gemini-cli
+    - codex
+    - aider
+    - continue
+    - cline
+    - roo
+    - windsurf
+  quickstart_loc: 180
+  user_commands: 4         # /specify /plan /tasks /implement
+  docs_url: https://github.github.io/spec-kit/

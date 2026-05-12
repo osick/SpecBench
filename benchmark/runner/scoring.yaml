@@ -1,0 +1,171 @@
+# SpecBench dimension scoring rules.
+#
+# Each dimension scores 0..4. Each dimension is a weighted sum of signals,
+# clipped to [0, 4]. Signals are produced by metrics.py (deterministic) or
+# judge.py (LLM-as-judge with frozen prompt + n=5 samples + median).
+#
+# IMPORTANT: this file is normative. Framework definitions cannot override
+# any rule here. If you propose a change, do it in a PR with rationale.
+
+version: "0.1"
+
+dimensions:
+
+  spec_quality:                            # dim 1
+    description: |
+      Is the spec unambiguous, testable, and readable by a non-engineer?
+    signals:
+      - id: spec_present
+        type: automated
+        weight: 0.5
+        # 1.0 if a spec artefact exists at the declared path, else 0.
+      - id: acceptance_criteria_count
+        type: automated
+        weight: 0.5
+        # min(1.0, count/10). Encourages at least ten testable criteria.
+      - id: flesch_reading_ease
+        type: automated
+        weight: 0.5
+        # Maps Flesch score 0..100 → 0..1 (linear, clipped).
+        # >60 = readable by a PM; <30 = academic.
+      - id: ambiguity_judge
+        type: judge
+        weight: 2.5
+        prompt: ambiguity_v1
+        # Judge scores 0..4. We rescale to 0..1 before weighting so the
+        # judge cannot dominate, but it gets the largest single weight
+        # because it is the only signal that catches "vague but well-
+        # structured" specs.
+
+  traceability:                            # dim 2
+    description: |
+      Every code change can be traced to a spec section; every spec
+      section has at least one task or test.
+    signals:
+      - id: tasks_reference_spec_pct
+        type: automated
+        weight: 2.0
+        # Fraction of tasks that explicitly reference a spec section ID.
+      - id: commits_reference_id_pct
+        type: automated
+        weight: 1.0
+        # Fraction of commits with a spec/req ID in the message.
+      - id: spec_sections_covered_pct
+        type: automated
+        weight: 1.0
+        # Fraction of spec sections referenced from at least one task.
+
+  lifecycle_coverage:                      # dim 3
+    description: |
+      Framework covers intent → spec → plan → tasks → code → verify.
+    signals:
+      - id: intent_artefact
+        type: automated
+        weight: 0.5
+      - id: spec_artefact
+        type: automated
+        weight: 0.8
+      - id: plan_artefact
+        type: automated
+        weight: 0.8
+      - id: tasks_artefact
+        type: automated
+        weight: 0.8
+      - id: code_artefact
+        type: automated
+        weight: 0.6
+      - id: tests_artefact
+        type: automated
+        weight: 0.5
+
+  reviewability:                           # dim 4
+    description: |
+      Plain files diffable in a normal PR; reviewers can comment line-by-line.
+    signals:
+      - id: all_artefacts_in_git
+        type: automated
+        weight: 1.5
+      - id: markdown_share
+        type: automated
+        weight: 1.5
+        # Fraction of artefacts that are plain markdown.
+      - id: max_file_loc
+        type: automated
+        weight: 1.0
+        # 1.0 if no artefact > 500 LoC, else linear penalty to 0 at 2000.
+
+  portability:                             # dim 5
+    description: |
+      Works with multiple agents/models; not locked to one vendor.
+    signals:
+      - id: declared_agent_count
+        type: automated
+        weight: 1.5
+        # From framework's own docs (parsed once, snapshotted in
+        # framework-defs/<name>.yaml).
+      - id: model_swap_probe
+        type: automated
+        weight: 2.5
+        # T5: did the same workflow + artefacts work with a second model
+        # with no human edits? Boolean → 0 or 1.
+
+  drift_resistance:                        # dim 6
+    description: |
+      After unrelated edits, the framework keeps spec and code consistent
+      or surfaces the drift.
+    signals:
+      - id: drift_probe_detected
+        type: automated
+        weight: 3.0
+        # T2 drift probe: did the framework notice the manual edit?
+        # Boolean → 0 or 1. Run 3× and take majority.
+      - id: drift_repeat_consistency
+        type: automated
+        weight: 1.0
+        # Across 3 drift probes: 1.0 if consistent (always detects or
+        # always misses), 0 if flaky. Flakiness is itself a drift problem.
+
+  onboarding_cost:                         # dim 7
+    description: |
+      A new contributor productive in < 30 min from README alone.
+      Lower cost = higher score.
+    signals:
+      - id: time_to_first_spec_seconds
+        type: automated
+        weight: 1.5
+        # Wall-clock from `git init` to first spec file committed.
+        # Mapped: < 5 min → 1.0; > 30 min → 0.
+      - id: quickstart_loc
+        type: automated
+        weight: 1.0
+        # Lines in the canonical quickstart. < 50 → 1.0; > 500 → 0.
+      - id: commands_to_learn
+        type: automated
+        weight: 1.5
+        # Distinct slash commands / CLI verbs the user must run.
+        # ≤ 4 → 1.0; ≥ 12 → 0.
+
+  verification_loop:                       # dim 8
+    description: |
+      Framework runs or generates tests/contracts that prove acceptance.
+    signals:
+      - id: tests_generated_count
+        type: automated
+        weight: 1.0
+        # min(1.0, count / acceptance_criteria_count).
+      - id: tests_pass_against_code
+        type: automated
+        weight: 1.5
+        # Boolean: does the generated test suite exit 0 against the
+        # framework-produced code?
+      - id: acceptance_case_coverage_pct
+        type: automated
+        weight: 1.5
+        # Fraction of T1's acceptance cases covered by generated tests.
+
+# Score combiner: weighted sum, clipped to [0, 4].
+# A signal contributes (weight × normalised_value); the dimension is
+# normalised by the sum of its weights so that all-1.0 signals give 4.0.
+combine:
+  formula: "clip(4 * sum(weight_i * value_i) / sum(weight_i), 0, 4)"
+  rounding: 1   # one decimal place
