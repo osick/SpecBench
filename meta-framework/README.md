@@ -46,13 +46,18 @@ See:
 - [`components.md`](./components.md) — catalogue of options per slot with
   trade-offs.
 - [`decision-tree.md`](./decision-tree.md) — questions to ask, in order, to
-  arrive at a composition.
-- [`ai-decision-workflow.md`](./ai-decision-workflow.md) — an AI-driven
-  workflow that runs the decision tree as a slash-command and emits a
-  justified `specmeta.yaml`.
+  arrive at a composition (human-driven version).
+- [`personas/`](./personas/) — the **panel of eight personas** (Consultant,
+  Senior Engineer, Architect, Critic, PM, QA Lead, Security/Compliance,
+  Coach) that compose a `specmeta.yaml` through structured voting.
+- [`ai-decision-workflow.md`](./ai-decision-workflow.md) — the six-round
+  AI workflow that runs the panel as a slash-command and emits a
+  justified `specmeta.yaml` plus optional `dissents.md`.
+- [`intake.schema.json`](./intake.schema.json) — schema for non-interactive
+  (CI) runs.
 - [`recipes/`](./recipes/) — ready-made compositions for common project
-  profiles.
-- [`specmeta.schema.yaml`](./specmeta.schema.yaml) — the file format.
+  profiles, used by the Architect as priors.
+- [`specmeta.schema.yaml`](./specmeta.schema.yaml) — the output file format.
 
 ## Example: `specmeta.yaml` for a 5-person startup
 
@@ -87,3 +92,18 @@ other — best spec quality conflicts with lowest onboarding cost; tightest
 verification conflicts with vendor-neutrality. SpecMeta admits that
 explicitly and lets you make the trade-off once, in writing, instead of
 hiding it inside a tool choice.
+
+## Why a panel of personas?
+
+Picking the right combination is itself a multi-stakeholder decision. A
+single AI agent making the call tends to default to whichever framework
+is most prominent in its training data and has no built-in dissent.
+SpecMeta replaces "agent decides" with a structured panel of eight
+[personas](./personas/) — each with a defined remit, scoring heuristic,
+and veto right. The panel produces a *justified* composition and, when
+disagreement persists, a `dissents.md` capturing what didn't get
+resolved.
+
+See [`personas/README.md`](./personas/README.md) for the voting model
+and [`ai-decision-workflow.md`](./ai-decision-workflow.md) for the
+six-round procedure.

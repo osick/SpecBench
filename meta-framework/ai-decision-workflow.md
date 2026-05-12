@@ -1,38 +1,50 @@
 # SpecMeta AI Decision Workflow
 
 A reproducible, AI-driven workflow that takes a short project description
-and emits a concrete [`specmeta.yaml`](./specmeta.schema.yaml) composition
-with reasoning. Designed to run with any general-purpose coding agent
-(Claude Code, Cursor, Copilot, Codex, Gemini CLI, …).
+and emits a justified [`specmeta.yaml`](./specmeta.schema.yaml). Runs with
+any general-purpose coding agent (Claude Code, Cursor, Copilot, Codex,
+Gemini CLI, …).
+
+**The workflow drives a panel of [eight personas](./personas/) — Consultant,
+Senior Engineer, Architect, Critic, Product Manager, QA Lead, Security /
+Compliance, Coach — through six rounds.** Each persona has a defined remit,
+scoring heuristic, and veto right. The orchestrator (the agent running this
+workflow) plays each persona in turn and records the proceedings.
+
+See [`personas/README.md`](./personas/README.md) for the voting model and
+[`personas/<name>.md`](./personas/) for each persona's full prompt.
 
 ## Goal
 
-Replace the static [decision tree](./decision-tree.md) with an AI-mediated
-interview that:
+Replace ad-hoc framework-picking with a structured decision conference
+that:
 
-1. Elicits seven dimensions of the project profile in a fixed order.
-2. Scores candidate tools per slot using the
-   [SpecBench rubric](../BENCHMARK.md#rubric).
-3. Applies cross-slot constraints from [`components.md`](./components.md).
-4. Emits a *justified* `specmeta.yaml` — every slot choice cites the rule
-   or evidence that drove it.
-5. Stops early when the user provides enough information; asks the minimum
-   number of clarifying questions.
+1. Elicits seven dimensions of the project profile in a fixed order
+   (Consultant).
+2. Proposes a draft composition (Architect) based on the closest shipped
+   recipe.
+3. Subjects the draft to a panel vote with weighted persona scoring.
+4. Applies hard constraints (C1–C10) via the Critic's veto right and the
+   Senior Engineer's technical veto.
+5. Resolves ties by onboarding cost (Coach).
+6. Emits a *justified* `specmeta.yaml` plus a `dissents.md` capturing any
+   −2 votes that survived the rounds.
 
 The workflow is the AI agent's analogue of a 1-hour design conversation
-with a senior engineer. Output is a file you commit, not a chat reply.
+with a senior engineer, a sceptical CTO, a PM, and a QA lead in the room.
 
 ## Workflow shape
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 0 — Initialise                                         │
-│  Load: components.md, results.md, decision-tree.md, schema    │
+│ Round 0 — Initialise                                         │
+│  Load: components.md, results.md, decision-tree.md, schema,  │
+│        personas/*.md, recipes/*.md                           │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 1 — Project intake (≤ 7 questions, batched)            │
+│ Round 1 — 🧭 CONSULTANT runs intake (≤ 7 questions, batched) │
 │  Q1 Greenfield vs existing?                                  │
 │  Q2 Non-engineering stakeholders in spec review?             │
 │  Q3 Portability vs vendor-IDE tolerance?                     │
@@ -40,62 +52,103 @@ with a senior engineer. Output is a file you commit, not a chat reply.
 │  Q5 Formal verification needed anywhere?                     │
 │  Q6 Team size / review culture?                              │
 │  Q7 Editor / agent preference?                               │
+│  Outputs: intake.json + repo-signal inferences               │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 2 — Constraint propagation                             │
-│  Apply cross-slot rules from components.md.                  │
-│  Eliminate options that violate a hard constraint.           │
+│ Round 2 — 🏗️ ARCHITECT proposes draft composition            │
+│  Start from closest shipped recipe; modify minimally.        │
+│  Each slot gets a one-line rationale.                        │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 3 — Per-slot scoring                                   │
-│  For each of 7 slots, score remaining candidates on the      │
-│  rubric dimensions weighted by Phase-1 answers.              │
+│ Round 3 — Panel vote (parallel, structured)                  │
+│  👴 SENIOR · 📋 PM · 🧪 QA · 🔒 SECURITY · 🎓 COACH cast      │
+│  scored votes (-2..+2) per slot. Weights from persona/README. │
+│  🔍 CRITIC runs the C1-C10 constraint check.                 │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 4 — Compose & justify                                  │
-│  Pick the top-scored option per slot; write specmeta.yaml    │
-│  with a `rationale` field per slot.                          │
+│ Round 4 — Vetoes and amendments                              │
+│  Apply CRITIC + SENIOR vetoes. ARCHITECT amends. Re-vote     │
+│  only the slots that changed.                                │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Phase 5 — Sanity check                                       │
-│  Re-validate against constraints; check against the closest  │
-│  recipe; flag if the result is unusual ("not like any        │
-│  shipped recipe — review carefully").                        │
+│ Round 5 — 🎓 COACH tie-breaks on onboarding cost             │
+│  Slot ties within 0.5 pts → lower onboarding wins.           │
+│  > 6 distinct tools → drop the lowest-value one.             │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
-                       specmeta.yaml
+┌──────────────────────────────────────────────────────────────┐
+│ Round 6 — Write outputs                                      │
+│  specmeta.yaml at repo root (with per-slot rationale)         │
+│  dissents.md (only if any −2 vote survived)                  │
+│  short chat summary (≤ 8 lines)                              │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                       specmeta.yaml + dissents.md
 ```
+
+Most projects converge in Round 3 with no vetoes. Rounds 4–5 exist for the
+rare cases where structured disagreement matters.
+
+## Persona weighting
+
+The base weight is 1.0 per persona. Phase-1 answers adjust weights as
+follows (also documented in [`personas/README.md`](./personas/README.md)):
+
+| If Phase-1 says… | …then weight these higher |
+| --- | --- |
+| Greenfield + small team | Coach +0.5, Senior +0.3 |
+| Brownfield / monorepo | Critic +0.5, Senior +0.5 |
+| Non-engineering reviewers | Product Manager +0.5 |
+| Drift critical | QA Lead +0.5 |
+| Formal verification needed | Senior +0.5, Security +1.0 (un-muted) |
+| Team ≥ 20 | Architect +0.5, Coach +0.5 |
+| Mixed editors | Critic +0.3 |
+
+Weights are printed before any vote.
 
 ## Constraint catalogue
 
-These are hard rules the AI must respect; violation invalidates the
-composition.
+Hard rules. The Critic must veto any composition that violates one; the
+Senior Engineer must veto any that violates 1, 4, or 7.
 
 | ID | Rule |
 | -- | --- |
-| C1 | If `portability` weight > 0.7, exclude every option with portability score ≤ 1 in [`results.md`](../benchmark/results.md). |
+| C1 | If `portability_priority = high`, exclude every option with portability score ≤ 1 in [`results.md`](../benchmark/results.md). |
 | C2 | If `spec = tessl`, slots `plan` / `tasks` / `implementation` may be `null` (Tessl subsumes them). |
 | C3 | If `implementation = copilot-coding-agent`, slot `context` must contain `AGENTS.md`. |
-| C4 | If any element of `verification` includes `schemathesis`, slot `spec` must embed an OpenAPI document. |
+| C4 | If any element of `verification` is `schemathesis`, slot `spec` must embed an OpenAPI document. |
 | C5 | If `formal_verification = true`, slot `spec` must include `tla-plus` *or* `alloy` (additive, not replacing the human-readable spec). |
 | C6 | If `team_size < 5`, prefer onboarding-cost ≥ 3; exclude BMAD-METHOD unless user explicitly opts in. |
 | C7 | If `team_size ≥ 20`, prefer drift-resistance ≥ 3; require an explicit verification slot. |
 | C8 | If `greenfield = false`, prefer `openspec` for `spec` unless another option dominates by ≥ 1 point on every other relevant dimension. |
 | C9 | Never emit `null` for `context`, `spec`, or `implementation` — these slots are required by the schema. |
-| C10 | If two candidates tie within 0.5 points, pick the one with lower onboarding cost. |
+| C10 | If two candidates tie within 0.5 points after weighted voting, pick the one with lower onboarding cost (Coach's tie-break). |
+
+## Per-slot scoring formula
+
+```
+weighted_score(slot, framework) =
+    Σ_personas  persona_weight * persona_vote(slot, framework)
+  + Σ_dimensions  dimension_weight * framework_score(dimension)
+```
+
+Persona votes are in `[-2, +2]`; dimension scores come from
+[`results.md`](../benchmark/results.md). Dimension weights start at 1.0
+and adjust per the Phase-1 answers — see
+[the dimension table in the previous workflow draft](#dimension-weighting-from-phase-1-answers)
+(retained below for backwards compatibility).
 
 ## Dimension weighting from Phase-1 answers
-
-A simple, transparent mapping; the AI must show its work.
 
 | Phase-1 answer | Adjusts these dimension weights |
 | --- | --- |
@@ -108,113 +161,130 @@ A simple, transparent mapping; the AI must show its work.
 | Team ≤ 5 | +onboarding cost (lower is better) |
 | Editor preference = IDE | unlocks Kiro / Cursor-IDE family |
 
-Default weights start at 1.0 per dimension; each "matters" adjustment adds
-+0.5 (max 3.0). The agent must print the resolved weight vector before
-scoring.
+Default weights start at 1.0; each "matters" adjustment adds +0.5 (max 3.0).
 
-## Prompt template
+## Orchestrator prompt template
 
-Drop this into a file the agent reads (e.g.
-`.claude/commands/pick-specmeta.md` for Claude Code, or
-`/specmeta` rule in Cursor) and invoke as a slash command.
+Drop this into `.claude/commands/pick-specmeta.md` (Claude Code),
+`.cursor/rules/pick-specmeta.mdc` (Cursor), or
+`.github/prompts/pick-specmeta.md` (Copilot Coding Agent).
 
 ````markdown
-# /pick-specmeta — decide a SpecMeta composition
+# /pick-specmeta — run the SpecMeta panel
 
-You are the SpecMeta Decision Agent. Your job is to produce a
-`specmeta.yaml` that fits this project, with a per-slot rationale.
+You are the SpecMeta Orchestrator. Your job is NOT to decide alone — it is
+to run the eight-persona panel in sequence and faithfully record its
+output. You will adopt each persona one round at a time, using the
+persona file as that round's system prompt.
 
-## Inputs you have
+## Inputs
 
-- This repo's existing files (read them; note any signals).
-- `meta-framework/components.md` (the slot catalogue).
-- `benchmark/results.md` (per-framework scores on 8 dimensions).
-- `meta-framework/decision-tree.md` (the human decision tree).
-- `meta-framework/ai-decision-workflow.md` (this file — the procedure
-  and the constraint catalogue C1–C10).
-- `meta-framework/specmeta.schema.yaml` (output schema).
-- `meta-framework/recipes/*.md` (reference compositions).
+Read these files first. If any is missing, stop and ask the user.
 
-## Procedure (follow in order)
+- meta-framework/personas/README.md
+- meta-framework/personas/consultant.md
+- meta-framework/personas/senior-engineer.md
+- meta-framework/personas/architect.md
+- meta-framework/personas/critic.md
+- meta-framework/personas/product-manager.md
+- meta-framework/personas/qa-lead.md
+- meta-framework/personas/security-compliance.md
+- meta-framework/personas/coach.md
+- meta-framework/components.md
+- meta-framework/ai-decision-workflow.md (this file)
+- meta-framework/specmeta.schema.yaml
+- meta-framework/recipes/*.md
+- benchmark/results.md
 
-1. **Read** the inputs listed above. If a file is missing, stop and
-   ask the user to point you at it.
-2. **Interview** the user with the seven intake questions from
-   `ai-decision-workflow.md` § Phase 1. Batch them when possible.
-   Re-use any answers already evident from the repo (e.g. detect an
-   existing `.cursor/rules/` folder and infer editor preference).
-3. **Print the resolved weight vector** for the eight rubric dimensions
-   in a small table. Do not skip this step — the user must be able to
-   challenge the weights before you score.
-4. **Apply constraints C1–C10**, listing each elimination.
-5. **Score** each slot's candidates as: `weighted_score = Σ (weight_d ×
-   framework_score_d)` over the dimensions in `results.md`. Show a
-   small per-slot scoring table.
-6. **Compose** `specmeta.yaml` at the repo root using the schema. Each
-   slot must carry a `# rationale: …` comment citing (a) the top one or
-   two dimensions that decided it and (b) any constraint that pinned it.
-7. **Sanity check**: compare the composition to the four shipped
-   recipes (`greenfield-startup`, `enterprise-monorepo`,
-   `solo-prototype`, `safety-critical`). If the result matches none of
-   them within 2 slots, append a `notes:` warning to the file.
-8. **Stop**. Do not implement any spec yet; do not modify other files.
+## Procedure
 
-## Output
+Run the six rounds defined in ai-decision-workflow.md § Workflow shape.
+For each round, prefix your output with the round number and the persona
+symbol. Examples:
 
-A single new file `specmeta.yaml` at the repo root, plus a short summary
-in chat (≤ 8 lines) that lists each slot, its choice, and the dominant
-reason. No code edits, no PRs.
+  ## Round 1 — 🧭 Consultant
+  Intake answers: { greenfield: true, … }
 
-## Anti-patterns (refuse to emit)
+  ## Round 2 — 🏗️ Architect
+  Draft composition: …
 
-- Picking a vendor-locked tool when the user said portability matters.
-- Picking BMAD for a 2-person team without an explicit opt-in.
-- Filling `verification` with only `unit-tests` when the user marked
-  drift-resistance as critical.
-- Skipping the weight-vector print-out.
+  ## Round 3 — 👴 Senior says …
+  ## Round 3 — 📋 PM says …
+  …
+
+After Round 5, write:
+
+- `specmeta.yaml` at the repo root with per-slot `# rationale:` comments.
+- `dissents.md` ONLY if any −2 vote survived the rounds.
+- A ≤ 8-line summary in chat.
+
+## Hard rules
+
+- Print the persona weight vector and the dimension weight vector before
+  any vote.
+- Cite the constraint ID (C1–C10) for every veto.
+- A persona may not act outside its declared authority. If you are
+  tempted to (e.g. PM vetoing implementation), file a dissent instead.
+- Stop after writing the files. Do not edit anything else.
 ````
 
-## Example run (abbreviated)
+## Example panel transcript (abbreviated)
 
 ```
-User: 4-engineer fintech startup, new repo, building a payments API,
-      need audit trail, willing to use Cursor.
+## Round 1 — 🧭 Consultant
+Detected .cursor/ folder ⇒ editor=cursor (inferred).
+Asked Q1, Q2, Q4, Q5, Q6 in one message.
 
-Agent: Detected new repo. Reading inputs… done.
+Intake:
+  greenfield: true
+  non_engineer_reviewers: true   (auditor)
+  portability_priority: medium
+  drift_priority: critical       (audit)
+  formal_verification: false
+  team_size: 4
+  editor: cursor
+  notes: "fintech, SOC 2 next year"
 
-       Intake answers (inferred + confirmed):
-       Q1 greenfield: yes
-       Q2 non-eng reviewers: yes (auditor)
-       Q3 portability: medium
-       Q4 drift: critical (audit)
-       Q5 formal verification: no
-       Q6 team: 4
-       Q7 editor: Cursor
+Note: "SOC 2" un-mutes 🔒 Security.
 
-       Resolved weights:
-       spec-quality 2.0  traceability 2.0  lifecycle 1.0
-       reviewability 2.0  portability 1.5  drift 2.5
-       onboarding 1.5    verification 2.5
+## Round 2 — 🏗️ Architect
+Closest recipe: greenfield-startup. Modifications:
+  - Add `cursor-rules` to context (user said editor=cursor).
+  - Verification: pytest + schemathesis + pact (drift critical, audit).
 
-       Constraints applied: C6 excludes BMAD; C4 not triggered;
-       C8 N/A (greenfield).
+Draft:
+  context: [AGENTS.md, cursor-rules]
+  intent: intent.md
+  spec: spec-kit
+  plan: spec-kit
+  tasks: spec-kit
+  implementation: cursor
+  verification: [pytest, schemathesis, pact]
 
-       Top picks per slot (full scoring tables omitted here):
-       context        AGENTS.md + cursor-rules
-       intent         intent.md
-       spec           spec-kit         (reviewability 4, portability 4)
-       plan           spec-kit
-       tasks          spec-kit
-       implementation cursor
-       verification   pytest, schemathesis, pact
+## Round 3 — votes (weights: Senior 1.0, PM 1.5, QA 1.5, Security 1.0,
+##                         Coach 1.0, Critic 1.3, Architect 1.0)
+👴 Senior        +1 / +1 / +1 / +1 / +1 / +1 / +1     (note: needs OpenAPI in spec for C4)
+📋 PM            +2 spec, +1 elsewhere
+🧪 QA            +2 verification, +1 elsewhere
+🔒 Security      0 (no IDs in spec — recommend EARS supplement)
+🎓 Coach         +1 elsewhere, −1 verification (3 tools — at the limit)
+🔍 Critic        flags C4 (Schemathesis needs OpenAPI) — Senior agrees.
 
-       Closest recipe: greenfield-startup (matches 6/7 slots).
-       Wrote specmeta.yaml.
+## Round 4 — amendment
+Architect amends spec slot: spec-kit + OpenAPI document required in
+/specify template. Re-vote on spec only — all positive.
+
+## Round 5 — Coach
+6 distinct tools. At the limit but acceptable. No tie-break needed.
+
+## Round 6 — Outputs
+Wrote specmeta.yaml + a short summary. No dissents.md (no −2 survived).
 ```
 
-## Running it without an interactive user
+## Non-interactive (CI) mode
 
-For CI or onboarding scripts, pass a JSON answer file:
+Pass [`intake.schema.json`](./intake.schema.json)-conforming JSON instead
+of running the Consultant interactively:
 
 ```json
 {
@@ -224,27 +294,29 @@ For CI or onboarding scripts, pass a JSON answer file:
   "drift_priority": "critical",
   "formal_verification": false,
   "team_size": 4,
-  "editor": "cursor"
+  "editor": "cursor",
+  "notes": "fintech, SOC 2 next year"
 }
 ```
 
-The agent treats this as if the user had answered Phase 1; Phases 2–5
-proceed unchanged. This makes the workflow scriptable and
-deterministic when paired with `temperature=0`.
+The Consultant reads this as if the user had answered Phase 1; Rounds 2–6
+proceed unchanged. With `temperature=0` the proceedings are reproducible.
 
-## Why an AI workflow and not a script?
+## Why a panel of personas, not a single agent?
 
-A pure scoring script collapses the moment your project has a
-constraint the rubric didn't anticipate — "we use Bazel and our specs
-need to live next to BUILD files" or "we just hired an engineer who
-hates Cursor". The AI agent's value is reading those signals out of
-the repo and the conversation and pulling in the relevant rules
-without you having to encode every edge case.
+Three reasons (also in [`personas/README.md`](./personas/README.md)):
 
-The structure here (fixed phases, explicit weight vector, listed
-constraints, mandatory rationales) is deliberately *over*-specified to
-keep the agent from hand-waving. The output should look like a
-checklist someone could redo by hand and reach the same answer.
+1. **Diversity of failure mode.** A single agent that's wrong is wrong
+   in one direction; a panel that's wrong shows up as a 4–4 split the
+   user can read and resolve.
+2. **Auditability.** "Why did we pick X?" answered with "Consultant
+   logged Y from the user, Architect proposed Z, Critic raised C4, the
+   panel resolved it as W" is much better than "the model decided".
+3. **Different attention surfaces.** The Critic actively looks for
+   problems; the Coach actively looks for onboarding cost; the QA Lead
+   actively looks for verification gaps. Forcing the model to enact
+   these *attention policies* separately produces better composite
+   reasoning than "consider all angles".
 
 ## Roadmap
 
@@ -253,5 +325,7 @@ checklist someone could redo by hand and reach the same answer.
 - v0.3: ship per-agent invocation files (`.claude/commands/`,
   `.cursor/rules/`, `.github/copilot-instructions.md`) so the workflow
   is one slash-command away.
-- v0.4: feed real benchmark scorecard YAML (not paper evals) into
-  Phase 3 so the agent picks based on measured numbers.
+- v0.4: feed real benchmark scorecard YAML (not paper evals) into the
+  scoring step so the panel picks based on measured numbers.
+- v0.5: add a `panel-replay` mode where you re-run the proceedings on a
+  different intake and see only the diff in the composition.

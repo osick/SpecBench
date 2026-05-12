@@ -7,7 +7,7 @@ reflects the broader community's experience, not one author's view.
 
 ### 1. Add a framework to the awesome list
 
-Open a PR editing [`awesome-spec-frameworks.md`](./awesome-spec-frameworks.md).
+Open a PR editing the [`README.md`](./README.md) (which is the awesome list).
 Each entry needs:
 
 - Name and primary link.
@@ -39,6 +39,16 @@ Open a PR adding a file in [`meta-framework/recipes/`](./meta-framework/recipes/
 - Include a complete `specmeta.yaml`.
 - Explain *why* each slot was filled the way it was.
 - Note the trade-offs you accepted.
+
+### 4. Propose a new persona
+
+Open a PR adding a file in [`meta-framework/personas/`](./meta-framework/personas/).
+
+Each persona must declare: remit, knowledge it brings, authority (and any
+veto right), scoring heuristics, common dissents, and an example
+invocation prompt. New personas need a clear reason the existing eight
+don't cover them — "another voice is always good" is not enough. Likely
+candidates: Platform Engineer, SRE, Data Engineer, Accessibility, Legal.
 
 ## Code of conduct
 
