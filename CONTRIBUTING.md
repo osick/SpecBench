@@ -18,37 +18,31 @@ Each entry needs:
 We will reject promotional language, vendor announcements, and entries that
 are really just prompt collections.
 
-### 2. Submit or correct a scorecard
+### 2. Add a framework definition for the runner
 
-Open a PR adding or editing a file in [`benchmark/scorecards/`](./benchmark/scorecards/).
+Open a PR adding a file in
+[`benchmark/runner/framework-defs/`](./benchmark/runner/framework-defs/).
 
-- Use [`_template.md`](./benchmark/scorecards/_template.md).
-- Cite evidence for every score — file paths, transcript excerpts, links.
-- Mark the run as `paper` (documentation review) or `controlled`
-  (actual task run with pinned SHA).
+A framework definition tells the automated runner how to install the
+framework, invoke it on a task, and locate the artefacts it produces.
+Reuse [`_template.yaml`](./benchmark/runner/framework-defs/_template.yaml).
+
+The runner will then produce a controlled scorecard automatically — no
+hand-scoring required.
+
+### 3. Submit or correct a scorecard
+
+Open a PR adding or editing a file in
+[`benchmark/scorecards/`](./benchmark/scorecards/).
+
+- Prefer the runner — controlled scorecards must be produced by it.
+- For `paper` scorecards (documentation review only), use the markdown
+  [`_template.md`](./benchmark/scorecards/_template.md) and cite evidence
+  for every score: file paths, transcript excerpts, links.
 - Vendors are very welcome to submit corrected runs for their own
   framework. Disclose the relationship in the scorecard's *Notes*.
 
 A "score without evidence" PR will be asked for evidence before merge.
-
-### 3. Add a recipe to the meta-framework
-
-Open a PR adding a file in [`meta-framework/recipes/`](./meta-framework/recipes/).
-
-- One file per profile.
-- Include a complete `specmeta.yaml`.
-- Explain *why* each slot was filled the way it was.
-- Note the trade-offs you accepted.
-
-### 4. Propose a new persona
-
-Open a PR adding a file in [`meta-framework/personas/`](./meta-framework/personas/).
-
-Each persona must declare: remit, knowledge it brings, authority (and any
-veto right), scoring heuristics, common dissents, and an example
-invocation prompt. New personas need a clear reason the existing eight
-don't cover them — "another voice is always good" is not enough. Likely
-candidates: Platform Engineer, SRE, Data Engineer, Accessibility, Legal.
 
 ## Code of conduct
 
@@ -60,9 +54,14 @@ framework-tribalism are out of place here.
 - "Framework X is the best, scrap the rest" PRs.
 - Sponsored placements.
 - Scorecards inflated past available evidence.
-- Recipes that are really vendor pitches in disguise.
+- Framework definitions that secretly hard-code high scores (the runner
+  uses signed metric formulas — see
+  [`benchmark/runner/scoring.yaml`](./benchmark/runner/scoring.yaml)).
 
 ## Local checks
 
-There is no build. CI (when added) will lint markdown and validate
-`specmeta.yaml` files against [the schema](./meta-framework/specmeta.schema.yaml).
+CI (when added) will lint markdown, validate framework-definition YAMLs
+against
+[`benchmark/runner/framework-defs/_schema.json`](./benchmark/runner/framework-defs/_schema.json),
+and validate scorecards against
+[`benchmark/runner/scorecard.schema.json`](./benchmark/runner/scorecard.schema.json).
