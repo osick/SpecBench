@@ -47,6 +47,9 @@ See:
   trade-offs.
 - [`decision-tree.md`](./decision-tree.md) — questions to ask, in order, to
   arrive at a composition.
+- [`ai-decision-workflow.md`](./ai-decision-workflow.md) — an AI-driven
+  workflow that runs the decision tree as a slash-command and emits a
+  justified `specmeta.yaml`.
 - [`recipes/`](./recipes/) — ready-made compositions for common project
   profiles.
 - [`specmeta.schema.yaml`](./specmeta.schema.yaml) — the file format.
