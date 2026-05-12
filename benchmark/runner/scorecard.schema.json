@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specbench.dev/scorecard.schema.json",
+  "title": "SpecBench scorecard",
+  "description": "Machine-readable scorecard produced by the runner.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "run_type",
+    "framework",
+    "task",
+    "model",
+    "judge_model",
+    "seed_sha",
+    "runner_sha",
+    "timestamp_utc",
+    "scoring_version",
+    "judge_prompt_versions",
+    "dimensions",
+    "signals",
+    "acceptance",
+    "transcript_sha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "run_id": { "type": "string", "description": "ULID or UUID." },
+    "run_type": { "enum": ["paper", "controlled"] },
+    "framework": {
+      "type": "object",
+      "required": ["name", "version_sha"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "version_sha": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^T\\d+" },
+        "version": { "type": "string" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["name", "temperature"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "temperature": { "type": "number" }
+      }
+    },
+    "judge_model": {
+      "type": "object",
+      "required": ["name", "temperature", "samples"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "temperature": { "type": "number" },
+        "samples": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "seed_sha": { "type": "string" },
+    "runner_sha": { "type": "string" },
+    "timestamp_utc": { "type": "string", "format": "date-time" },
+    "scoring_version": { "type": "string" },
+    "judge_prompt_versions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "spec_quality",
+        "traceability",
+        "lifecycle_coverage",
+        "reviewability",
+        "portability",
+        "drift_resistance",
+        "onboarding_cost",
+        "verification_loop"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "type": "object",
+          "required": ["score", "signal_ids"],
+          "additionalProperties": false,
+          "properties": {
+            "score": { "type": "number", "minimum": 0, "maximum": 4 },
+            "signal_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "judge_variance": { "type": "number" }
+          }
+        }
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "value": {},
+          "raw": {},
+          "judge_samples": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["pass", "fail", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "pass": { "type": "integer", "minimum": 0 },
+        "fail": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "passed"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "passed": { "type": "boolean" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "transcript_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "notes": { "type": "string" }
+  }
+}

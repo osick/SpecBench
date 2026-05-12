@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specbench.dev/framework-def.schema.json",
+  "title": "SpecBench framework definition",
+  "description": "Declarative description of how the runner installs and invokes a framework on a task.",
+  "type": "object",
+  "required": ["name", "version_pin", "install", "invoke", "artefacts", "declared"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
+    "homepage": { "type": "string", "format": "uri" },
+    "version_pin": {
+      "type": "object",
+      "description": "How the runner pins the framework version for reproducibility.",
+      "oneOf": [
+        { "required": ["git_sha"], "properties": { "git_sha": { "type": "string" } } },
+        { "required": ["release_tag"], "properties": { "release_tag": { "type": "string" } } },
+        { "required": ["pypi_version"], "properties": { "pypi_version": { "type": "string" } } },
+        { "required": ["npm_version"], "properties": { "npm_version": { "type": "string" } } }
+      ]
+    },
+    "install": {
+      "type": "array",
+      "description": "Shell commands to install the framework into the sandbox. Run in order.",
+      "items": { "type": "string" }
+    },
+    "invoke": {
+      "type": "object",
+      "required": ["per_task"],
+      "additionalProperties": false,
+      "properties": {
+        "per_task": {
+          "type": "object",
+          "description": "How to run the framework on a SpecBench task. Templated with {prompt_path} and {repo}.",
+          "required": ["commands"],
+          "additionalProperties": false,
+          "properties": {
+            "commands": { "type": "array", "items": { "type": "string" } },
+            "env": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "artefacts": {
+      "type": "object",
+      "description": "Where to find each kind of artefact after invocation. Globs allowed.",
+      "additionalProperties": false,
+      "properties": {
+        "intent":  { "type": "array", "items": { "type": "string" } },
+        "spec":    { "type": "array", "items": { "type": "string" } },
+        "plan":    { "type": "array", "items": { "type": "string" } },
+        "tasks":   { "type": "array", "items": { "type": "string" } },
+        "code":    { "type": "array", "items": { "type": "string" } },
+        "tests":   { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "declared": {
+      "type": "object",
+      "description": "Static facts the runner cannot measure from the artefacts. Snapshotted by the framework-def maintainer and verifiable against the framework's docs.",
+      "required": ["supported_agents", "quickstart_loc", "user_commands"],
+      "additionalProperties": false,
+      "properties": {
+        "supported_agents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of agents/IDEs the framework officially supports. From the framework's README."
+        },
+        "quickstart_loc": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Lines in the canonical quickstart doc."
+        },
+        "user_commands": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Distinct CLI verbs / slash commands the user must learn."
+        },
+        "docs_url": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}
