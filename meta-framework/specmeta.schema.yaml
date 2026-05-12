@@ -1,0 +1,36 @@
+# SpecMeta composition file schema (v0.1)
+# A repo using SpecMeta places a `specmeta.yaml` at its root.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: SpecMeta composition
+type: object
+required: [specmeta_version, slots]
+properties:
+  specmeta_version:
+    type: string
+    enum: ["0.1"]
+  profile:
+    type: string
+    description: |
+      Optional human label, e.g. "greenfield-startup",
+      "enterprise-monorepo", "solo-prototype".
+  slots:
+    type: object
+    required: [context, spec, implementation]
+    properties:
+      context:        { $ref: "#/$defs/slot" }
+      intent:         { $ref: "#/$defs/slot" }
+      spec:           { $ref: "#/$defs/slot" }
+      plan:           { $ref: "#/$defs/slot" }
+      tasks:          { $ref: "#/$defs/slot" }
+      implementation: { $ref: "#/$defs/slot" }
+      verification:   { $ref: "#/$defs/slot" }
+  notes:
+    type: string
+$defs:
+  slot:
+    oneOf:
+      - type: string                       # single tool
+      - type: array                        # ordered list of tools
+        items: { type: string }
+      - type: "null"                       # explicitly empty
