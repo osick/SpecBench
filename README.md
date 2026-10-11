@@ -188,6 +188,7 @@ Quality gates for the spec itself.
 
 ## 12. MCP servers and dashboards
 
+- **[Reqode](https://reqode.com)** 🟢🏢🔒 — Product-context platform linking requirements, data models, UI, API contracts and tests; MCP lets coding agents read specifications and record implementation findings, while specification changes go through human-reviewed change requests.
 - ⭐ **[spec-workflow-mcp (Pimzino)](https://github.com/Pimzino/spec-workflow-mcp)** 🟢🌱 — MCP server exposing the Requirements → Design → Tasks → Implementation workflow. Real-time web dashboard (port 5000), VS Code sidebar extension, approval workflow, task progress bars. Works with Claude Desktop, Cursor, Continue, Cline, and others.
 - **[mcp-server-spec-driven-development](https://github.com/Engineering4AI/awesome-spec-driven-development)** 🌱 — Generic MCP server for SDD.
 - **[Glama MCP catalogue](https://glama.ai/mcp/servers)** — index of MCP servers including several SDD-relevant ones.
